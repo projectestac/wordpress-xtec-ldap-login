@@ -1,0 +1,102 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: XTEC LDAP Login\n"
+"POT-Creation-Date: 2016-01-26 00:37+0100\n"
+"PO-Revision-Date: 2016-01-26 00:39+0100\n"
+"Last-Translator: Toni Ginard <toni.ginard@gmail.com>\n"
+"Language-Team: Àgora <agora@xtec.cat>\n"
+"Language: ca\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.5.4\n"
+"X-Poedit-KeywordsList: __;gettext;gettext_noop;_e\n"
+"X-Poedit-Basepath: /home/user1/mv/agora/html/wordpress/wp-content/plugins/"
+"xtec-ldap-login/languages\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-SearchPath-0: ..\n"
+
+#: ../xtec-ldap-login.php:31 ../xtec-ldap-login.php:39
+msgid "LDAP Login"
+msgstr "Validació LDAP"
+
+#: ../xtec-ldap-login.php:69
+msgid "Options saved."
+msgstr "S'han desat les opcions"
+
+#: ../xtec-ldap-login.php:76
+msgid "XTEC LDAP Login"
+msgstr "Validació amb l'LDAP de la XTEC"
+
+#: ../xtec-ldap-login.php:80
+msgid "LDAP Host"
+msgstr "Servidor LDAP"
+
+#: ../xtec-ldap-login.php:84
+msgid "LDAP Port"
+msgstr "Port LDAP"
+
+#: ../xtec-ldap-login.php:88
+msgid "LDAP Version"
+msgstr "Versió de l'LDAP"
+
+#: ../xtec-ldap-login.php:92
+msgid "Base DN"
+msgstr "Base DN"
+
+#: ../xtec-ldap-login.php:96
+msgid "Validation Type"
+msgstr "Tipus de validació"
+
+#: ../xtec-ldap-login.php:105
+msgid "LDAP"
+msgstr "LDAP"
+
+#: ../xtec-ldap-login.php:107
+msgid ""
+"The user is validated through the LDAP server. If the user enters for the "
+"first time and validates, the application registers it. First attempt to "
+"validate as user of LDAP server and then if fails attempt to validate as "
+"user of the application."
+msgstr ""
+
+#: ../xtec-ldap-login.php:112
+msgid "Application Data Base"
+msgstr ""
+
+#: ../xtec-ldap-login.php:114
+msgid "The user is validated through Application Data Base"
+msgstr ""
+
+#: ../xtec-ldap-login.php:120
+msgid "Save"
+msgstr ""
+
+#: ../xtec-ldap-login.php:145
+msgid "<strong>ERROR</strong>: The username field is empty."
+msgstr ""
+
+#: ../xtec-ldap-login.php:148
+msgid "<strong>ERROR</strong>: The password field is empty."
+msgstr ""
+
+#: ../xtec-ldap-login.php:200
+msgid "<strong>ERROR</strong>: Your account has been marked as a spammer."
+msgstr ""
+
+#: ../xtec-ldap-login.php:206
+msgid "Site Suspended."
+msgstr ""
+
+#: ../xtec-ldap-login.php:227 ../xtec-ldap-login.php:236
+msgid "<strong>ERROR</strong>: Incorrect password."
+msgstr ""
+
+#: ../xtec-ldap-login.php:259
+#, php-format
+msgid ""
+"<strong>ERROR</strong>: The password you entered for the username <strong>"
+"%1$s</strong> is incorrect. <a href=\"%2$s\" title=\"Password Lost and Found"
+"\">Lost your password</a>?"
+msgstr ""
