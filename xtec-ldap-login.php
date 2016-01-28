@@ -2,12 +2,17 @@
 /**
  * Plugin Name: XTEC LDAP Login
  * Plugin URI: https://github.com/projectestac/wordpress-xtec-ldap-login
- * Description: Overrides the core WordPress authentication method to allow the user authentication and registration through LDAP Server. It also changes the login screen logo and it adds an API function for a web service authentication
- * Version: 2.0
- * Author: Francesc Bassas i Toni Ginard
+ * Description: Overrides the core WordPress authentication method to allow the user authentication and registration through LDAP Server. It also adds an API function for a web service authentication
+ * Version: 2.1
+ * Author: Francesc Bassas & Toni Ginard
  * Author URI:
  */
 
+add_action('init', 'xtec_ldap_login_init');
+
+/**
+ * Plugin initialization
+ */
 function xtec_ldap_login_init() {
     // Localization
     load_plugin_textdomain('xtec-ldap-login', false, basename(dirname(__FILE__)) . '/languages/');
@@ -18,55 +23,52 @@ function xtec_ldap_login_init() {
     } else {
         add_action('admin_menu', 'xtec_ldap_login_admin_menu');
     }
+
+    add_filter('authenticate', 'xtec_ldap_authenticate', 10, 3); // Executed before standard filter
 }
 
-add_action('init', 'xtec_ldap_login_init');
-add_filter('authenticate', 'xtec_ldap_authenticate', 10, 3); // Executed before standard filter
-
 /**
- * Adds plugin to settings in network admin menu
+ * Add plugin to settings in network admin menu
  */
 function xtec_ldap_login_network_admin_menu() {
     add_submenu_page('settings.php', __('LDAP Login', 'xtec-ldap-login'), __('LDAP Login', 'xtec-ldap-login'), 'manage_network_options', 'ms-ldap-login', 'xtec_ldap_login_options');
 }
 
 /**
- * Adds plugin to settings in admin menu
+ * Add plugin to tools in admin menu
  */
 function xtec_ldap_login_admin_menu() {
-    if (is_xtecadmin()) {
-        add_submenu_page('tools.php', __('LDAP Login', 'xtec-ldap-login'), __('LDAP Login', 'xtec-ldap-login'), 'manage_options', 'ldap-login', 'xtec_ldap_login_options');
-    }
+    add_submenu_page('tools.php', __('LDAP Login', 'xtec-ldap-login'), __('LDAP Login', 'xtec-ldap-login'), 'manage_options', 'ldap-login', 'xtec_ldap_login_options');
 }
 
 /**
- * Add plugin options form to network administration options form.
+ * Create options form and save data
  */
 function xtec_ldap_login_options() {
-	if ($_GET['action'] == 'siteoptions') {
-        if ($_POST['xtec_ldap_host']) {
-            $xtec_ldap_host = $_POST['xtec_ldap_host'];
+	if (isset($_GET['action']) && $_GET['action'] == 'siteoptions') {
+        if (isset($_POST['xtec_ldap_host'])) {
+            $xtec_ldap_host = sanitize_text_field($_POST['xtec_ldap_host']);
             update_site_option('xtec_ldap_host', $xtec_ldap_host);
         }
-        if ($_POST['xtec_ldap_port']) {
-            $xtec_ldap_port = $_POST['xtec_ldap_port'];
+        if (isset($_POST['xtec_ldap_port'])) {
+            $xtec_ldap_port = sanitize_text_field($_POST['xtec_ldap_port']);
             update_site_option('xtec_ldap_port', $xtec_ldap_port);
         }
-        if ($_POST['xtec_ldap_version']) {
-            $xtec_ldap_version = $_POST['xtec_ldap_version'];
+        if (isset($_POST['xtec_ldap_version'])) {
+            $xtec_ldap_version = sanitize_text_field($_POST['xtec_ldap_version']);
             update_site_option('xtec_ldap_version', $xtec_ldap_version);
         }
-        if ($_POST['xtec_ldap_base_dn']) {
-            $xtec_ldap_base_dn = $_POST['xtec_ldap_base_dn'];
+        if (isset($_POST['xtec_ldap_base_dn'])) {
+            $xtec_ldap_base_dn = sanitize_text_field($_POST['xtec_ldap_base_dn']);
             update_site_option('xtec_ldap_base_dn', $xtec_ldap_base_dn);
         }
-        if ($_POST['xtec_ldap_login_type']) {
-            $xtec_ldap_login_type = $_POST['xtec_ldap_login_type'];
+        if (isset($_POST['xtec_ldap_login_type'])) {
+            $xtec_ldap_login_type = sanitize_text_field($_POST['xtec_ldap_login_type']);
             update_site_option('xtec_ldap_login_type', $xtec_ldap_login_type);
         }
         ?>
-        <div id="message" class="updated"><p><?php _e('Options saved.', 'xtec-ldap-login') ?></p></div>
-        <?php
+        <div id="message" class="updated notice is-dismissible"><p><?php _e('Options saved.', 'xtec-ldap-login') ?></p></div>
+    <?php
     }
     ?>
     <div class="wrap">
@@ -75,6 +77,7 @@ function xtec_ldap_login_options() {
             <h2><?php _e('XTEC LDAP Login', 'xtec-ldap-login') ?></h2>
             <table class="form-table">
                 <tbody>
+                    <?php if (is_xtec_super_admin()) { ?>
                     <tr valign="top">
                         <th scope="row"><?php _e('LDAP Host', 'xtec-ldap-login') ?></th>
                         <td><input type="text" size="50" name="xtec_ldap_host" value="<?php echo get_site_option('xtec_ldap_host'); ?>" /></td>
@@ -90,33 +93,48 @@ function xtec_ldap_login_options() {
                     <tr valign="top">
                         <th scope="row"><?php _e('Base DN', 'xtec-ldap-login') ?></th>
                         <td><input type="text" size="50" name="xtec_ldap_base_dn" value="<?php echo get_site_option('xtec_ldap_base_dn'); ?>" /></td>
-                    </tr>        
+                    </tr>
+                    <?php } ?>
                     <tr valign="top">
                         <th scope="row"><?php _e('Validation Type', 'xtec-ldap-login') ?></th>
                         <?php
-                        if (!get_site_option('xtec_ldap_login_type')) {
-                            update_site_option('xtec_ldap_login_type', 'LDAP');
-                        }
+                        $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type', 'LDAP');
                         ?>
-                        <td><input type="radio" name="xtec_ldap_login_type" value="LDAP" 
-                                <?php if (get_site_option('xtec_ldap_login_type') == "LDAP") { echo 'checked="checked"'; } ?>
-                            /> 
-                            <?php _e('LDAP', 'xtec-ldap-login'); ?>
+                        <td>
+                            <p>
+                                <label>
+                                    <input type="radio" name="xtec_ldap_login_type" value="LDAP" 
+                                    <?php if ($xtec_ldap_login_type == 'LDAP') {
+                                        echo 'checked="checked"';
+                                    } ?>
+                                    />
+                                    <?php _e('LDAP', 'xtec-ldap-login'); ?>
+                                </label>
+                            </p>
+                            <p class="description">
+                                <?php _e('The user is validated through the LDAP server. If the user enters for the first time and validates, the application registers it. First attempt to validate as user of LDAP server and then if fails attempt to validate as user of the application. <strong>IMPORTANT: When LDAP is on, any XTEC user can log in.</strong>', 'xtec-ldap-login'); ?>
+                            </p>
                             <br />
-                            <?php _e('The user is validated through the LDAP server. If the user enters for the first time and validates, the application registers it. First attempt to validate as user of LDAP server and then if fails attempt to validate as user of the application.', 'xtec-ldap-login'); ?>
-                            <br />
-                            <br><input type="radio" name="xtec_ldap_login_type" value="Application Data Base"
-                                <?php if (get_site_option('xtec_ldap_login_type') == "Application Data Base") { echo 'checked="checked"'; } ?>
-                            />
-                            <?php _e('Application Data Base', 'xtec-ldap-login'); ?>
-                            <br />
-                            <?php _e('The user is validated through Application Data Base', 'xtec-ldap-login'); ?>
-                            <br />
+                            <p>
+                                <label>
+                                    <input type="radio" name="xtec_ldap_login_type" value="Application Data Base"
+                                    <?php if ($xtec_ldap_login_type == 'Application Data Base') {
+                                        echo 'checked="checked"'; 
+                                    } ?>
+                                    />
+                                </label>
+                                <?php _e('Application Data Base', 'xtec-ldap-login'); ?>
+                            </p>
+                            <p class="description">
+                                <?php _e('The user is validated through Application Data Base', 'xtec-ldap-login'); ?>
+                            </p>
                         </td>
                     </tr>        
                 </tbody>
             </table>
-            <p class="submit"><input type="submit" name="submit" id="submit" class="button-primary" value="<?php _e('Save', 'xtec-ldap-login'); ?>"></p>
+            <p class="submit">
+                <input type="submit" name="submit" id="submit" class="button-large button-primary" value="<?php _e('Save', 'xtec-ldap-login'); ?>" />
+            </p>
         </form>
     </div>
     <?php
@@ -142,11 +160,12 @@ function xtec_ldap_authenticate($user, $username, $password) {
     if (empty($username) || empty($password)) {
         $error = new WP_Error();
 
-        if (empty($username))
-            $error->add('empty_username', __('<strong>ERROR</strong>: The username field is empty.', 'xtec-ldap-login'));
-
-        if (empty($password))
-            $error->add('empty_password', __('<strong>ERROR</strong>: The password field is empty.', 'xtec-ldap-login'));
+        if (empty($username)) {
+            $error->add('empty_username', __('The username is empty.', 'xtec-ldap-login'));
+        }
+        if (empty($password)) {
+            $error->add('empty_password', __('The password is empty.', 'xtec-ldap-login'));
+        }
 
         return $error;
     }
@@ -156,121 +175,119 @@ function xtec_ldap_authenticate($user, $username, $password) {
         $username = substr($username, 0, -strlen('@xtec.cat'));
     }
 
-    $userdata = get_user_by('login', $username);
+    // Check if user exists in wp_users
+    $user_info = get_user_by('login', $username);
 
-    if (!$userdata || (strtolower($userdata->user_login) != strtolower($username))) {
-        // No user, we attempt to create one
-        $ldap = ldap_connect(get_site_option('xtec_ldap_host'), get_site_option('xtec_ldap_port'))
-                or die ("Can't connect to LDAP server.");
+    // In some cases always do local login (admin and @edu365.cat)
+    if ($user_info &&
+            ((strlen($username) > 8) ||
+            ($username == 'admin') ||
+            (is_xtecblocs() && preg_match("/^.+@edu365\.cat$/", $user_info->user_email)))
+            ) {
+        if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) {
+            do_action('wp_login_failed', $username);
+            return new WP_Error('incorrect_password', __('The password is not correct', 'xtec-ldap-login'));
+        }
+        
+        return new WP_User($user_info->ID);
+    }
 
-        ldap_set_option($ldap, LDAP_OPT_PROTOCOL_VERSION, get_site_option('xtec_ldap_version'));
+    $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type');
+    $xtec_ldap_host = get_site_option('xtec_ldap_host');
+    $xtec_ldap_port = get_site_option('xtec_ldap_port');
+    $xtec_ldap_version = get_site_option('xtec_ldap_version');
+    $xtec_ldap_base_dn = get_site_option('xtec_ldap_base_dn');
 
-        $ldapbind = @ldap_bind($ldap, 'cn=' . $username . ',' . get_site_option('xtec_ldap_base_dn'), $password);
+    if ($xtec_ldap_login_type == 'LDAP') {
+        // Verify credentials through LDAP
+        $ldap_conn = ldap_connect($xtec_ldap_host, $xtec_ldap_port);
+        if ($ldap_conn === false) {
+            return new WP_Error('ldap_connection', __('Could not connect to LDAP server', 'xtec-ldap-login'));
+        }
 
-        if ($ldapbind == true) {
-            $result = ldap_search($ldap, get_site_option('xtec_ldap_base_dn'), '(cn=' . $username . ')', array(LOGIN, 'sn', 'givenname', 'mail'));
-            $ldapuser = ldap_get_entries($ldap, $result);
+        ldap_set_option($ldap_conn, LDAP_OPT_PROTOCOL_VERSION, $xtec_ldap_version);
 
-            if ($ldapuser['count'] == 1) {
-                // Create user using wp standard include
-                $userData = array(
-                    'user_pass' => $password,
-                    'user_login' => $username,
-                    'user_nicename' => $ldapuser[0]['givenname'][0] . ' ' . $ldapuser[0]['sn'][0],
-                    'user_email' => $ldapuser[0]['mail'][0],
-                    'display_name' => $ldapuser[0]['givenname'][0] . ' ' . $ldapuser[0]['sn'][0],
-                    'first_name' => $ldapuser[0]['givenname'][0],
-                    'last_name' => $ldapuser[0]['sn'][0],
-                    // May be necessary for blocs!
-                    //'role' => strtolower('subscriber')
-                );
+        $ldap_bind = @ldap_bind($ldap_conn, 'cn=' . $username . ',' . $xtec_ldap_base_dn, $password);
 
-                // Insert the user into the database (creates it)
-                $user_id = wp_insert_user($userData);
+        if ($ldap_bind === false) {
+            do_action('wp_login_failed', $username);
+            return new WP_Error('incorrect_password', __('Could not bind to the LDAP directory. The username, the password or both are not correct', 'xtec-ldap-login'));
+        }
 
-                if (!is_wp_error($user_id)) {
-                    // On success, get data again after user creation
-                    $userdata = get_user_by('login', $username);
-                } else {
-                    return new WP_Error($user_id->get_error_code(), $user_id->get_error_message());
+        $result = ldap_search($ldap_conn, $xtec_ldap_base_dn, '(cn=' . $username . ')', array('cn', 'sn', 'givenname', 'mail'));
+        $ldap_user = ldap_get_entries($ldap_conn, $result);
+
+        // If user does not exist in wp_config and the credentials are valid in LDAP, create the local user
+        if ((!$user_info || (strtolower($user_info->user_login) != strtolower($username))) && ($ldap_user['count'] == 1)) {
+            // Create user using wp standard include
+            $user_data = array(
+                'user_pass' => $password,
+                'user_login' => $username,
+                'user_nicename' => $ldap_user[0]['givenname'][0] . ' ' . $ldap_user[0]['sn'][0],
+                'user_email' => $ldap_user[0]['mail'][0],
+                'display_name' => $ldap_user[0]['givenname'][0] . ' ' . $ldap_user[0]['sn'][0],
+                'first_name' => $ldap_user[0]['givenname'][0],
+                'last_name' => $ldap_user[0]['sn'][0],
+            );
+
+            // In Àgora will use the default role of WordPress
+            if (is_xtecblocs()) {
+                $user_data['role'] = strtolower('subscriber');
+            }
+
+            // Insert the user into the database (creates it)
+            $user_id = wp_insert_user($user_data);
+
+            if (is_wp_error($user_id)) {
+                return new WP_Error($user_id->get_error_code(), $user_id->get_error_message());
+            }
+
+            // Do the actual validation
+            return new WP_User($user_id);
+        } else {
+            if (is_multisite()) {
+                // Is user marked as spam?
+                if (1 == $user_info->spam) {
+                    return new WP_Error('invalid_username', __('Your account has been marked as a spammer', 'xtec-ldap-login'));
+                }
+                // Is a user's blog marked as spam?
+                if (!is_super_admin($user_info->ID) && isset($user_info->primary_blog)) {
+                    $details = get_blog_details($user_info->primary_blog);
+                    if (is_object($details) && $details->spam == 1) {
+                        return new WP_Error('blog_suspended', __('Site Suspended', 'xtec-ldap-login'));
+                    }
                 }
             }
-        } else {
-            do_action('wp_login_failed', $username);
-            return new WP_Error('invalid_username', '<strong>ERROR</strong>: Aquest nom d\'usuari i contrasenya no corresponen a cap usuari XTEC.');
-        }
-    }
 
-    if (is_multisite()) {
-        // Is user marked as spam?
-        if (1 == $userdata->spam)
-            return new WP_Error('invalid_username', __('<strong>ERROR</strong>: Your account has been marked as a spammer.'));
+            $user_info = apply_filters('wp_authenticate_user', $user_info, $password);
 
-        // Is a user's blog marked as spam?
-        if (!is_super_admin($userdata->ID) && isset($userdata->primary_blog)) {
-            $details = get_blog_details($userdata->primary_blog);
-            if (is_object($details) && $details->spam == 1) {
-                return new WP_Error('blog_suspended', __('Site Suspended.'));
-            }
-        }
-    }
-
-    $userdata = apply_filters('wp_authenticate_user', $userdata, $password);
-
-    if (is_wp_error($userdata)) {
-        return new WP_Error($userdata->get_error_code(), $userdata->get_error_message());
-    }
-
-    if (get_site_option('xtec_ldap_login_type') == 'LDAP') {
-        // Attempt to validate through LDAP
-        $ldap = ldap_connect(get_site_option('xtec_ldap_host'), get_site_option('xtec_ldap_port'))
-                or die("Can't connect to LDAP server.");
-
-        ldap_set_option($ldap, LDAP_OPT_PROTOCOL_VERSION, get_site_option('xtec_ldap_version'));
-        $ldapbind = @ldap_bind($ldap, 'cn=' . $username . ',' . get_site_option('xtec_ldap_base_dn'), $password);
-
-        if ($ldapbind == false) {
-            // If LDAP validation fails, check if it is a user of the application
-            if (!wp_check_password($password, $userdata->user_pass, $userdata->ID)) {
-                do_action('wp_login_failed', $username);
-                return new WP_Error('incorrect_password', __('<strong>ERROR</strong>: Incorrect password.'));
+            if (is_wp_error($user_info)) {
+                return new WP_Error($user_info->get_error_code(), $user_info->get_error_message());
             }
 
-            // XTEC users (<=8 chars) can only log in through LDAP (exceptions: 'admin' and @edu365.cat)
-            $user_info = get_user_by('login', $username);
-
-            if ((strlen($username) > 8) || ($username == 'admin') || preg_match("/^.+@edu365\.cat$/", $user_info->user_email)) {
-                return new WP_User($userdata->ID);
-            } else {
-                return new WP_Error('incorrect_password', __('<strong>ERROR</strong>: Incorrect password.'));
-            }
-        } else { // $ldapbind == true
             // Update the password if it has changed
-            if (!wp_check_password($password, $userdata->user_pass, $userdata->ID)) {
-                wp_update_user(array("ID" => $userdata->ID, "user_pass" => $password));
+            if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) {
+                wp_update_user(array('ID' => $user_info->ID, 'user_pass' => $password));
             }
 
-            $result = ldap_search($ldap, get_site_option('xtec_ldap_base_dn'), '(cn=' . $username . ')', array('mail'));
-            $ldapuser = ldap_get_entries($ldap, $result);
-
-            if ($ldapuser['count'] == 1) {
-                $domain = strstr($ldapuser[0]['mail'][0], '@');
+            if ($ldap_user['count'] == 1) {
+                $domain = strstr($ldap_user[0]['mail'][0], '@');
                 if ($domain == '@xtec.cat') {
                     // It's an XTEC user
-                    update_user_meta($userdata->ID, 'xtec_user_creator', 'LDAP_XTEC');
+                    update_user_meta($user_info->ID, 'xtec_user_creator', 'LDAP_XTEC');
                 }
             }
 
             // Do the actual validation
-            return new WP_User($userdata->ID);
+            return new WP_User($user_info->ID);
         }
     } else { // get_site_option('xtec_ldap_login_type') == "Application Data Base")
-        if (!wp_check_password($password, $userdata->user_pass, $userdata->ID)) {
-            return new WP_Error('incorrect_password', sprintf(__('<strong>ERROR</strong>: The password you entered for the username <strong>%1$s</strong> is incorrect. <a href="%2$s" title="Password Lost and Found">Lost your password</a>?'), $username, site_url('wp-login.php?action=lostpassword', 'login')));
+        if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) {
+            return new WP_Error('incorrect_password', sprintf(__('The password you entered for the username <strong>%1$s</strong> is incorrect. <a href="%2$s" title="Password Lost and Found">Lost your password</a>?', 'xtec-ldap-login'), $username, site_url('wp-login.php?action=lostpassword', 'login')));
         }
 
         // Do the actual validation
-        return new WP_User($userdata->ID);
+        return new WP_User($user_info->ID);
     }
 }
 
@@ -313,4 +330,18 @@ function xtec_authenticate($username, $password) {
             return 2 . '$$' . $user->user_email;
         }
     }
+}
+
+/**
+ * Add Dashboard Widget
+ */
+function xtec_ldap_dashboard_setup() {
+    wp_add_dashboard_widget('xtec_ldap_dashboard', __('LDAP Login', 'xtec-ldap-login'), 'xtec_ldap_dashboard_message');
+}
+
+/**
+ * Content of Dashboard Widget
+ */
+function xtec_ldap_dashboard_message() {
+    _e('Login via LDAP is activated', 'xtec-ldap-login');
 }
