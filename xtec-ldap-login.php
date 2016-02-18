@@ -154,8 +154,10 @@ function xtec_ldap_authenticate($user, $username, $password) {
         return $user;
     }
 
-    // Remove standard authenticate
-    remove_filter('authenticate', 'wp_authenticate_username_password', 20, 3);
+    // Remove standard authentication only in XTECBlocs.
+    if (is_xtecblocs()) {
+        remove_filter('authenticate', 'wp_authenticate_username_password', 20, 3);
+    }
 
     if (empty($username) || empty($password)) {
         $error = new WP_Error();
@@ -210,6 +212,8 @@ function xtec_ldap_authenticate($user, $username, $password) {
         $ldap_bind = @ldap_bind($ldap_conn, 'cn=' . $username . ',' . $xtec_ldap_base_dn, $password);
 
         if ($ldap_bind === false) {
+            // If LDAP fails, in Nodes, this do_action activates the local login. In XTECBlocs, 
+            // it was previously removed, so this do_action has no effect
             do_action('wp_login_failed', $username);
             return new WP_Error('incorrect_password', __('Could not bind to the LDAP directory. The username, the password or both are not correct', 'xtec-ldap-login'));
         }
