@@ -242,6 +242,12 @@ function xtec_ldap_authenticate($user, $username, $password) {
             // Insert the user into the database (creates it)
             $user_id = wp_insert_user($user_data);
 
+            // Set user metadata required for XTECBlocs
+            $domain = strstr($ldap_user[0]['mail'][0], '@');
+            if ($domain == '@xtec.cat') {
+                update_user_meta($user_id, 'xtec_user_creator', 'LDAP_XTEC');
+            }
+
             if (is_wp_error($user_id)) {
                 return new WP_Error($user_id->get_error_code(), $user_id->get_error_message());
             }
@@ -277,7 +283,7 @@ function xtec_ldap_authenticate($user, $username, $password) {
             if ($ldap_user['count'] == 1) {
                 $domain = strstr($ldap_user[0]['mail'][0], '@');
                 if ($domain == '@xtec.cat') {
-                    // It's an XTEC user
+                    // Ensure the user metadata is set, as it is required to create blogs in XTECBlocs
                     update_user_meta($user_info->ID, 'xtec_user_creator', 'LDAP_XTEC');
                 }
             }
