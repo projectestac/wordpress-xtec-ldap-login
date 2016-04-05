@@ -8,6 +8,8 @@
  * Author URI:
  */
 
+const XTEC_DOMAIN = '@xtec.cat';
+
 add_action('init', 'xtec_ldap_login_init');
 
 /**
@@ -141,7 +143,12 @@ function xtec_ldap_login_options() {
 }
 
 /**
- * Checks a user's login information and it tries to logs them in through LDAP Server or through application database depending on plugin configuration.
+ * Checks a user's login information and it tries to log them in through LDAP 
+ * server or locally depending on plugin configuration. Usernames longer than 
+ * 8 chars or having edu365 domain or called 'admin', always log in locally.
+ * Any existing user whose e-mail is XTEC, will always log in through LDAP if
+ * it is activated. Users that validate successfully via LDAP who doesn't exist 
+ * locally, are created using WordPress API.
  *
  * @param WP_User $user
  * @param string $username User's username
@@ -153,7 +160,7 @@ function xtec_ldap_authenticate($user, $username, $password) {
     if (is_a($user, 'WP_User')) {
         return $user;
     }
-
+    
     // Remove standard authentication only in XTECBlocs.
     if (is_xtecblocs()) {
         remove_filter('authenticate', 'wp_authenticate_username_password', 20, 3);
@@ -173,13 +180,18 @@ function xtec_ldap_authenticate($user, $username, $password) {
     }
 
     // Filter username to remove trailing '@xtec.cat' in case it exists
-    if (strpos($username, '@xtec.cat')) {
-        $username = substr($username, 0, -strlen('@xtec.cat'));
+    if (strpos($username, XTEC_DOMAIN)) {
+        $username = substr($username, 0, -strlen(XTEC_DOMAIN));
     }
 
     // Check if user exists in wp_users
     $user_info = get_user_by('login', $username);
-
+    
+    // If cannot find user_login in wp_users, look for any user with @xtec.cat e-mail
+    if ($user_info === false) {
+        $user_info = get_user_by('email', $username . XTEC_DOMAIN);
+    }
+    
     // In some cases always do local login (admin and @edu365.cat)
     if ($user_info &&
             ((strlen($username) > 8) ||
@@ -190,7 +202,7 @@ function xtec_ldap_authenticate($user, $username, $password) {
             do_action('wp_login_failed', $username);
             return new WP_Error('incorrect_password', __('The password is not correct', 'xtec-ldap-login'));
         }
-        
+
         return new WP_User($user_info->ID);
     }
 
@@ -221,9 +233,9 @@ function xtec_ldap_authenticate($user, $username, $password) {
         $result = ldap_search($ldap_conn, $xtec_ldap_base_dn, '(cn=' . $username . ')', array('cn', 'sn', 'givenname', 'mail'));
         $ldap_user = ldap_get_entries($ldap_conn, $result);
 
-        // If user does not exist in wp_config and the credentials are valid in LDAP, create the local user
-        if ((!$user_info || (strtolower($user_info->user_login) != strtolower($username))) && ($ldap_user['count'] == 1)) {
-            // Create user using wp standard include
+        // If user does not exist in wp_users and the credentials are valid in LDAP, create the local user
+        if (!$user_info && ($ldap_user['count'] == 1)) {
+            // Create user using wp standard API
             $user_data = array(
                 'user_pass' => $password,
                 'user_login' => $username,
@@ -244,7 +256,7 @@ function xtec_ldap_authenticate($user, $username, $password) {
 
             // Set user metadata required for XTECBlocs
             $domain = strstr($ldap_user[0]['mail'][0], '@');
-            if ($domain == '@xtec.cat') {
+            if ($domain == XTEC_DOMAIN) {
                 update_user_meta($user_id, 'xtec_user_creator', 'LDAP_XTEC');
             }
 
@@ -282,7 +294,7 @@ function xtec_ldap_authenticate($user, $username, $password) {
 
             if ($ldap_user['count'] == 1) {
                 $domain = strstr($ldap_user[0]['mail'][0], '@');
-                if ($domain == '@xtec.cat') {
+                if ($domain == XTEC_DOMAIN) {
                     // Ensure the user metadata is set, as it is required to create blogs in XTECBlocs
                     update_user_meta($user_info->ID, 'xtec_user_creator', 'LDAP_XTEC');
                 }
@@ -340,18 +352,4 @@ function xtec_authenticate($username, $password) {
             return 2 . '$$' . $user->user_email;
         }
     }
-}
-
-/**
- * Add Dashboard Widget
- */
-function xtec_ldap_dashboard_setup() {
-    wp_add_dashboard_widget('xtec_ldap_dashboard', __('LDAP Login', 'xtec-ldap-login'), 'xtec_ldap_dashboard_message');
-}
-
-/**
- * Content of Dashboard Widget
- */
-function xtec_ldap_dashboard_message() {
-    _e('Login via LDAP is activated', 'xtec-ldap-login');
 }
