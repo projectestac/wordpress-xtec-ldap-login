@@ -11,6 +11,7 @@
 const XTEC_DOMAIN = '@xtec.cat';
 
 add_action('init', 'xtec_ldap_login_init');
+add_filter('send_password_change_email', '__return_false');
 
 /**
  * Plugin initialization
