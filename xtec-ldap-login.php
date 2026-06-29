@@ -14,9 +14,11 @@ register_activation_hook(__FILE__, 'xtec_ldap_login_activate');
 add_action('init', 'xtec_ldap_login_init');
 add_filter('send_password_change_email', '__return_false');
 
-function xtec_ldap_login_activate() {
+function xtec_ldap_login_activate()
+{
     // Add the rewrite rule on activation
     add_rewrite_rule('^oauth-callback/?$', 'index.php?oauth_callback=1', 'top');
+
     // Flush rewrite rules to make sure our custom endpoint is registered
     flush_rewrite_rules();
 }
@@ -24,7 +26,8 @@ function xtec_ldap_login_activate() {
 /**
  * Plugin initialization
  */
-function xtec_ldap_login_init() {
+function xtec_ldap_login_init()
+{
     // Localization
     load_plugin_textdomain('xtec-ldap-login', false, basename(__DIR__) . '/languages/');
 
@@ -35,37 +38,55 @@ function xtec_ldap_login_init() {
         add_action('admin_menu', 'xtec_ldap_login_admin_menu');
     }
 
-    add_filter('authenticate', 'xtec_ldap_authenticate', 10, 3); // Executed before standard filter
-
+    add_filter('authenticate', 'xtec_ldap_authenticate', 10, 3); // Executed before standard filter.
     add_action('login_form', 'xtec_oauth_add_login_button');
+
     // Use 'template_redirect' to handle the callback on the frontend
     add_action('template_redirect', 'xtec_oauth_handle_callback');
 
     add_rewrite_rule('^oauth-callback/?$', 'index.php?oauth_callback=1', 'top');
-    add_filter('query_vars', function($vars) {
+    add_filter('query_vars', function ($vars) {
         $vars[] = 'oauth_callback';
         return $vars;
     });
 }
 
 /**
- * Add plugin to settings in network admin menu
+ * Add plugin to settings in network admin menu (multisite configuration)
  */
-function xtec_ldap_login_network_admin_menu() {
-    add_submenu_page('settings.php', __('XTEC Login', 'xtec-ldap-login'), __('XTEC Login', 'xtec-ldap-login'), 'manage_network_options', 'ms-ldap-login', 'xtec_ldap_login_options');
+function xtec_ldap_login_network_admin_menu()
+{
+    add_submenu_page(
+            'settings.php',
+            __('XTEC Login', 'xtec-ldap-login'),
+            __('XTEC Login', 'xtec-ldap-login'),
+            'manage_network_options',
+            'ms-ldap-login',
+            'xtec_ldap_login_options'
+    );
 }
 
 /**
- * Add plugin to tools in admin menu
+ * Add plugin to tools in admin menu (single site configuration)
  */
-function xtec_ldap_login_admin_menu() {
-    add_submenu_page('tools.php', __('XTEC Login', 'xtec-ldap-login'), __('XTEC Login', 'xtec-ldap-login'), 'manage_options', 'ldap-login', 'xtec_ldap_login_options');
+function xtec_ldap_login_admin_menu()
+{
+    add_submenu_page(
+            'tools.php',
+            __('XTEC Login', 'xtec-ldap-login'),
+            __('XTEC Login', 'xtec-ldap-login'),
+            'manage_options',
+            'ldap-login',
+            'xtec_ldap_login_options'
+    );
 }
 
 /**
  * Create options form and save data
  */
-function xtec_ldap_login_options() {
+function xtec_ldap_login_options()
+{
+    // Save data.
     if (isset($_GET['action']) && $_GET['action'] === 'siteoptions') {
         if (isset($_POST['xtec_ldap_host'])) {
             $xtec_ldap_host = sanitize_text_field($_POST['xtec_ldap_host']);
@@ -95,96 +116,219 @@ function xtec_ldap_login_options() {
             $xtec_oauth_client_secret = sanitize_text_field($_POST['xtec_oauth_client_secret']);
             update_site_option('xtec_oauth_client_secret', $xtec_oauth_client_secret);
         }
+        if (isset($_POST['xtec_oauth_client_token_url'])) {
+            $xtec_oauth_client_token_url = sanitize_text_field($_POST['xtec_oauth_client_token_url']);
+            update_site_option('xtec_oauth_client_token_url', $xtec_oauth_client_token_url);
+        }
+        if (isset($_POST['xtec_oauth_client_user_info_url'])) {
+            $xtec_oauth_client_user_info_url = sanitize_text_field($_POST['xtec_oauth_client_user_info_url']);
+            update_site_option('xtec_oauth_client_user_info_url', $xtec_oauth_client_user_info_url);
+        }
+        if (isset($_POST['xtec_oauth_client_scope'])) {
+            $xtec_oauth_client_scope = sanitize_text_field($_POST['xtec_oauth_client_scope']);
+            update_site_option('xtec_oauth_client_scope', $xtec_oauth_client_scope);
+        }
+        if (isset($_POST['xtec_oauth_client_auth_url'])) {
+            $xtec_oauth_client_auth_url = sanitize_text_field($_POST['xtec_oauth_client_auth_url']);
+            update_site_option('xtec_oauth_client_auth_url', $xtec_oauth_client_auth_url);
+        }
         ?>
-        <div id="message" class="updated notice is-dismissible"><p><?php _e('Options saved.', 'xtec-ldap-login') ?></p></div>
-    <?php
+        <div id="message" class="updated notice is-dismissible">
+            <p><?php _e('Options saved.', 'xtec-ldap-login') ?></p>
+        </div>
+        <?php
     }
     ?>
+
     <div class="wrap">
-        <?php $page = (is_multisite()) ? 'ms-ldap-login' : 'ldap-login'; ?>
+        <?php
+        $page = (is_multisite()) ? 'ms-ldap-login' : 'ldap-login'; ?>
         <form method="post" action="?page=<?php echo $page; ?>&action=siteoptions">
             <h2><?php _e('XTEC Login', 'xtec-ldap-login') ?></h2>
             <table class="form-table">
                 <tbody>
-                    <?php if (is_xtec_super_admin()) { ?>
+                <?php
+                if (is_xtec_super_admin()) { ?>
                     <tr valign="top">
-                        <th scope="row"><?php _e('LDAP Host', 'xtec-ldap-login') ?></th>
-                        <td><input type="text" size="50" name="xtec_ldap_host" value="<?php echo get_site_option('xtec_ldap_host'); ?>" /></td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row"><?php _e('LDAP Port', 'xtec-ldap-login') ?></th>
-                        <td><input type="text" size="50" name="xtec_ldap_port" value="<?php echo get_site_option('xtec_ldap_port'); ?>" /></td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row"><?php _e('LDAP Version', 'xtec-ldap-login') ?></th>
-                        <td><input type="text" size="50" name="xtec_ldap_version" value="<?php echo get_site_option('xtec_ldap_version'); ?>" /></td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row"><?php _e('Base DN', 'xtec-ldap-login') ?></th>
-                        <td><input type="text" size="50" name="xtec_ldap_base_dn" value="<?php echo get_site_option('xtec_ldap_base_dn'); ?>" /></td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row"><?php _e('OAuth Client ID', 'xtec-ldap-login') ?></th>
-                        <td><input type="text" size="50" name="xtec_oauth_client_id" value="<?php echo get_site_option('xtec_oauth_client_id'); ?>" /></td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row"><?php _e('OAuth Client Secret', 'xtec-ldap-login') ?></th>
-                        <td><input type="text" size="50" name="xtec_oauth_client_secret" value="<?php echo get_site_option('xtec_oauth_client_secret'); ?>" /></td>
-                    </tr>
-                    <?php } ?>
-                    <tr valign="top">
-                        <th scope="row"><?php _e('Validation Type', 'xtec-ldap-login') ?></th>
-                        <?php
-                        $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type', 'LDAP');
-                        ?>
+                        <th scope="row">
+                            <label for="xtec_ldap_host">
+                                <?php _e('LDAP Host', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
                         <td>
-                            <p>
-                                <label>
-                                    <input type="radio" name="xtec_ldap_login_type" value="LDAP"
-                                    <?php if ($xtec_ldap_login_type === 'LDAP') {
-                                        echo 'checked="checked"';
-                                    } ?>
-                                    />
-                                    <?php _e('LDAP', 'xtec-ldap-login'); ?>
-                                </label>
-                            </p>
-                            <p class="description">
-                                <?php _e('The user is validated through the LDAP server. If the user enters for the first time and validates, the application registers it. First attempt to validate as user of LDAP server and then if fails attempt to validate as user of the application. <strong>IMPORTANT: When LDAP is on, any XTEC user can log in.</strong>', 'xtec-ldap-login'); ?>
-                            </p>
-                            <br />
-                            <p>
-                                <label>
-                                    <input type="radio" name="xtec_ldap_login_type" value="OAuth"
-                                    <?php if ($xtec_ldap_login_type === 'OAuth') {
-                                        echo 'checked="checked"';
-                                    } ?>
-                                    />
-                                    <?php _e('OAuth', 'xtec-ldap-login'); ?>
-                                </label>
-                            </p>
-                            <p class="description">
-                                <?php _e('The user is validated through the OAuth server.', 'xtec-ldap-login'); ?>
-                            </p>
-                            <br />
-                            <p>
-                                <label>
-                                    <input type="radio" name="xtec_ldap_login_type" value="Application Data Base"
-                                    <?php if ($xtec_ldap_login_type === 'Application Data Base') {
-                                        echo 'checked="checked"';
-                                    } ?>
-                                    />
-                                </label>
-                                <?php _e('Application Data Base', 'xtec-ldap-login'); ?>
-                            </p>
-                            <p class="description">
-                                <?php _e('The user is validated through Application Data Base', 'xtec-ldap-login'); ?>
-                            </p>
+                            <input type="text" size="50" id="xtec_ldap_host" name="xtec_ldap_host"
+                                   value="<?php echo get_site_option('xtec_ldap_host'); ?>"/>
                         </td>
                     </tr>
+                    <tr valign="top">
+                        <th scope="row">
+                            <label for="xtec_ldap_port">
+                                <?php _e('LDAP Port', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" size="50" id="xtec_ldap_port" name="xtec_ldap_port"
+                                   value="<?php echo get_site_option('xtec_ldap_port'); ?>"/>
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">
+                            <label for="xtec_ldap_version">
+                                <?php _e('LDAP Version', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" size="50" id="xtec_ldap_version" name="xtec_ldap_version"
+                                   value="<?php echo get_site_option('xtec_ldap_version'); ?>"/>
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">
+                            <label for="xtec_ldap_base_dn">
+                                <?php _e('Base DN', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" size="50" id="xtec_ldap_base_dn" name="xtec_ldap_base_dn"
+                                   value="<?php echo get_site_option('xtec_ldap_base_dn'); ?>"/>
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">
+                            <label for="xtec_oauth_client_id">
+                                <?php _e('OAuth Client ID', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" size="50" id="xtec_oauth_client_id" name="xtec_oauth_client_id"
+                                   value="<?php echo get_site_option('xtec_oauth_client_id'); ?>"/>
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">
+                            <label for="xtec_oauth_client_secret">
+                                <?php _e('OAuth Client Secret', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" size="50" id="xtec_oauth_client_secret" name="xtec_oauth_client_secret"
+                                   value="<?php echo get_site_option('xtec_oauth_client_secret'); ?>"/>
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">
+                            <label for="xtec_oauth_client_token_url">
+                                <?php _e('OAuth Client Token URL', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" size="50" id="xtec_oauth_client_token_url" name="xtec_oauth_client_token_url"
+                                   value="<?php echo get_site_option('xtec_oauth_client_token_url'); ?>"/>
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">
+                            <label for="xtec_oauth_client_user_info_url">
+                                <?php _e('OAuth Client User Info URL', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" size="50" id="xtec_oauth_client_user_info_url" name="xtec_oauth_client_user_info_url"
+                                   value="<?php echo get_site_option('xtec_oauth_client_user_info_url'); ?>"/>
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">
+                            <label for="xtec_oauth_client_scope">
+                                <?php _e('OAuth Client Scope', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" size="50" id="xtec_oauth_client_scope" name="xtec_oauth_client_scope"
+                                   value="<?php echo get_site_option('xtec_oauth_client_scope'); ?>"/>
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">
+                            <label for="xtec_oauth_client_auth_url">
+                                <?php _e('OAuth Client Auth URL', 'xtec-ldap-login') ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" size="50" id="xtec_oauth_client_auth_url" name="xtec_oauth_client_auth_url"
+                                   value="<?php echo get_site_option('xtec_oauth_client_auth_url'); ?>"/>
+                        </td>
+                    </tr>
+                <?php
+                } ?>
+                <tr valign="top">
+                    <th scope="row">
+                        <label for="xtec_ldap_login_type">
+                            <?php _e('Validation Type', 'xtec-ldap-login') ?>
+                        </label>
+                    </th>
+                    <?php
+                    $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type', 'LDAP');
+                    ?>
+                    <td>
+                        <p>
+                            <label>
+                                <input type="radio" name="xtec_ldap_login_type" value="LDAP"
+                                    <?php
+                                    if ($xtec_ldap_login_type === 'LDAP') {
+                                        echo 'checked="checked"';
+                                    }
+                                    ?>
+                                />
+                                <?php _e('LDAP', 'xtec-ldap-login'); ?>
+                            </label>
+                        </p>
+                        <p class="description">
+                            <?php
+                            _e(
+                                'The user is validated through the LDAP server. If the user enters for the first time and validates, the application registers it. First attempt to validate as user of LDAP server and then if fails attempt to validate as user of the application. <strong>IMPORTANT: When LDAP is on, any XTEC user can log in.</strong>',
+                                'xtec-ldap-login'
+                            );
+                            ?>
+                        </p>
+                        <br/>
+                        <p>
+                            <label>
+                                <input type="radio" name="xtec_ldap_login_type" value="OAuth"
+                                    <?php
+                                    if ($xtec_ldap_login_type === 'OAuth') {
+                                        echo 'checked="checked"';
+                                    } ?>
+                                />
+                                <?php _e('OAuth', 'xtec-ldap-login'); ?>
+                            </label>
+                        </p>
+                        <p class="description">
+                            <?php _e('The user is validated through the OAuth server.', 'xtec-ldap-login'); ?>
+                        </p>
+                        <br/>
+                        <p>
+                            <label>
+                                <input type="radio" name="xtec_ldap_login_type" value="Application Data Base"
+                                    <?php
+                                    if ($xtec_ldap_login_type === 'Application Data Base') {
+                                        echo 'checked="checked"';
+                                    }
+                                    ?>
+                                />
+                            </label>
+                            <?php _e('Application Data Base', 'xtec-ldap-login'); ?>
+                        </p>
+                        <p class="description">
+                            <?php _e('The user is validated through Application Data Base', 'xtec-ldap-login'); ?>
+                        </p>
+                    </td>
+                </tr>
                 </tbody>
             </table>
             <p class="submit">
-                <input type="submit" name="submit" id="submit" class="button-large button-primary" value="<?php _e('Save', 'xtec-ldap-login'); ?>" />
+                <input type="submit" name="submit" id="submit" class="button-large button-primary"
+                       value="<?php _e('Save'); ?>"/>
             </p>
         </form>
     </div>
@@ -204,8 +348,8 @@ function xtec_ldap_login_options() {
  * @param string $password User's password
  * @return WP_Error|WP_User WP_User object if login successful, otherwise WP_Error object.
  */
-function xtec_ldap_authenticate($user, $username, $password) {
-
+function xtec_ldap_authenticate($user, string $username, string $password)
+{
     if ($user instanceof \WP_User) {
         return $user;
     }
@@ -213,7 +357,7 @@ function xtec_ldap_authenticate($user, $username, $password) {
     $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type');
 
     if ($xtec_ldap_login_type === 'OAuth') {
-        // With OAuth, the authentication is handled by the callback
+        // With OAuth, the authentication is handled by the callback.
         return $user;
     }
 
@@ -235,12 +379,12 @@ function xtec_ldap_authenticate($user, $username, $password) {
         return $error;
     }
 
-    // Filter username to remove trailing '@xtec.cat' in case it exists
+    // Filter username to remove trailing '@xtec.cat' in case it exists.
     if (strpos($username, XTEC_DOMAIN)) {
         $username = substr($username, 0, -strlen(XTEC_DOMAIN));
     }
 
-    // Check if user exists in wp_users
+    // Check if user exists in wp_users.
     $user_info = get_user_by('login', $username);
 
     // If cannot find user_login in wp_users, look for any user with @xtec.cat e-mail
@@ -250,10 +394,10 @@ function xtec_ldap_authenticate($user, $username, $password) {
 
     // In some cases always do local login (admin and @edu365.cat)
     if ($user_info &&
-            ((strlen($username) > 8) ||
-            ($username == 'admin') ||
+        ((strlen($username) > 8) ||
+            ($username === 'admin') ||
             (is_xtecblocs() && preg_match("/^.+@edu365\.cat$/", $user_info->user_email)))
-            ) {
+    ) {
         if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) {
             do_action('wp_login_failed', $username);
             return new WP_Error('incorrect_password', __('The password is not correct', 'xtec-ldap-login'));
@@ -268,7 +412,7 @@ function xtec_ldap_authenticate($user, $username, $password) {
     $xtec_ldap_base_dn = get_site_option('xtec_ldap_base_dn');
 
     if ($xtec_ldap_login_type === 'LDAP') {
-        // Verify credentials through LDAP
+        // Verify credentials through LDAP.
         $ldap_conn = ldap_connect($xtec_ldap_host, $xtec_ldap_port);
         if ($ldap_conn === false) {
             return new WP_Error('ldap_connection', __('Could not connect to LDAP server', 'xtec-ldap-login'));
@@ -325,13 +469,13 @@ function xtec_ldap_authenticate($user, $username, $password) {
 
         if (is_multisite()) {
             // Is user marked as spam?
-            if (1 == $user_info->spam) {
+            if (1 === (int)$user_info->spam) {
                 return new WP_Error('invalid_username', __('Your account has been marked as a spammer', 'xtec-ldap-login'));
             }
             // Is a user's blog marked as spam?
             if (!is_super_admin($user_info->ID) && isset($user_info->primary_blog)) {
                 $details = get_blog_details($user_info->primary_blog);
-                if (is_object($details) && $details->spam == 1) {
+                if (is_object($details) && (int)$details->spam === 1) {
                     return new WP_Error('blog_suspended', __('Site Suspended', 'xtec-ldap-login'));
                 }
             }
@@ -378,7 +522,8 @@ function xtec_ldap_authenticate($user, $username, $password) {
  *         '103' if username's incorrect,
  *         '104' if password's incorrect.
  */
-function xtec_authenticate($username, $password) {
+function xtec_authenticate($username, $password)
+{
 
     if ('' == $username) {
         return 101;
@@ -390,7 +535,7 @@ function xtec_authenticate($username, $password) {
 
     $user = get_userdatabylogin($username);
 
-    if (!$user || (strtolower($user->user_login) != strtolower($username) )) {
+    if (!$user || (strtolower($user->user_login) != strtolower($username))) {
         return 103;
     }
 
@@ -405,24 +550,29 @@ function xtec_authenticate($username, $password) {
     }
 }
 
-function xtec_oauth_add_login_button() {
+function xtec_oauth_add_login_button()
+{
     $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type');
     if ($xtec_ldap_login_type === 'OAuth') {
         $client_id = get_site_option('xtec_oauth_client_id');
         $redirect_uri = site_url('/oauth-callback');
-        $scope = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
-        $auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=' . $client_id . '&redirect_uri=' . $redirect_uri . '&scope=' . urlencode($scope);
-        echo '<a href="' . $auth_url . '" class="button button-primary button-large">' . __('Login with Google', 'xtec-ldap-login') . '</a><br><br>';
+        $scope = get_site_option('xtec_oauth_client_scope');
+        $auth_url = get_site_option('xtec_oauth_client_auth_url');
+        $auth_url .= '&client_id=' . $client_id . '&redirect_uri=' . $redirect_uri . '&scope=' . urlencode($scope);
+
+        echo '<a href="' . $auth_url . '" class="button button-primary button-large">' . __('XTEC Login', 'xtec-ldap-login') . '</a><br><br>';
     }
 }
 
-function xtec_oauth_handle_callback() {
+function xtec_oauth_handle_callback()
+{
     if (get_query_var('oauth_callback')) {
         xtec_oauth_callback();
     }
 }
 
-function xtec_oauth_callback() {
+function xtec_oauth_callback()
+{
     $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type');
     if ($xtec_ldap_login_type !== 'OAuth') {
         return;
@@ -430,20 +580,20 @@ function xtec_oauth_callback() {
 
     if (isset($_GET['code'])) {
         $code = $_GET['code'];
+        $token_url = get_site_option('xtec_oauth_client_token_url');
         $client_id = get_site_option('xtec_oauth_client_id');
         $client_secret = get_site_option('xtec_oauth_client_secret');
         $redirect_uri = site_url('/oauth-callback');
 
-        $token_url = 'https://oauth2.googleapis.com/token';
-        $response = wp_remote_post($token_url, array(
-            'body' => array(
+        $response = wp_remote_post($token_url, [
+            'body' => [
                 'grant_type' => 'authorization_code',
                 'client_id' => $client_id,
                 'client_secret' => $client_secret,
                 'redirect_uri' => $redirect_uri,
                 'code' => $code,
-            ),
-        ));
+            ],
+        ]);
 
         if (is_wp_error($response)) {
             wp_die(__('Error getting access token.', 'xtec-ldap-login'));
@@ -451,13 +601,13 @@ function xtec_oauth_callback() {
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
         $access_token = $body['access_token'];
+        $user_info_url = get_site_option('xtec_oauth_client_user_info_url');
 
-        $user_info_url = 'https://www.googleapis.com/oauth2/v2/userinfo';
-        $response = wp_remote_get($user_info_url, array(
-            'headers' => array(
+        $response = wp_remote_get($user_info_url, [
+            'headers' => [
                 'Authorization' => 'Bearer ' . $access_token,
-            ),
-        ));
+            ],
+        ]);
 
         if (is_wp_error($response)) {
             wp_die(__('Error getting user info.', 'xtec-ldap-login'));
@@ -484,12 +634,12 @@ function xtec_oauth_callback() {
             $nicename = sanitize_title($nicename);
 
             $user_data = [
-                'user_login'    => $username,
-                'user_pass'     => wp_generate_password(),
-                'user_email'    => $email,
-                'first_name'    => $given_name,
-                'last_name'     => $family_name,
-                'display_name'  => $user_info['name'] ?? '',
+                'user_login' => $username,
+                'user_pass' => wp_generate_password(),
+                'user_email' => $email,
+                'first_name' => $given_name,
+                'last_name' => $family_name,
+                'display_name' => $user_info['name'] ?? '',
                 'user_nicename' => $nicename,
             ];
 
