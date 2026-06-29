@@ -508,48 +508,6 @@ function xtec_ldap_authenticate($user, string $username, string $password)
     return new WP_User($user_info->ID);
 }
 
-/**
- * This function is only used by xtec-external-authentication.php in XTECBlocs.
- * Checks a user login information and tries to authenticate them in through the
- * LDAP Server or through the application database if it fails.
- *
- * @param string $username User's username
- * @param string $password User's password
- * @return '1$$usermail' if user is a XTEC user,
- *         '2$$usermail' if user is not a XTEC user,
- *         '101' if username's empty,
- *         '102' if password's empty,
- *         '103' if username's incorrect,
- *         '104' if password's incorrect.
- */
-function xtec_authenticate($username, $password)
-{
-
-    if ('' == $username) {
-        return 101;
-    }
-
-    if ('' == $password) {
-        return 102;
-    }
-
-    $user = get_userdatabylogin($username);
-
-    if (!$user || (strtolower($user->user_login) != strtolower($username))) {
-        return 103;
-    }
-
-    if (!wp_check_password($password, $user->user_pass, $user->ID)) {
-        return 104;
-    } else {
-        if (get_user_meta($user->ID, 'xtec_user_creator', true) == 'LDAP_XTEC') {
-            return 1 . '$$' . $user->user_email;
-        } else {
-            return 2 . '$$' . $user->user_email;
-        }
-    }
-}
-
 function xtec_oauth_add_login_button()
 {
     $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type');
