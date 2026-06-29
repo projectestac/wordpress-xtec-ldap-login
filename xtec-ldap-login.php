@@ -522,7 +522,7 @@ function xtec_oauth_add_login_button()
     $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type');
     if ($xtec_ldap_login_type === 'OAuth') {
         $client_id = get_site_option('xtec_oauth_client_id');
-        $redirect_uri = site_url('/oauth-callback');
+        $redirect_uri = network_home_url() . 'oauth-callback';
         $scope = get_site_option('xtec_oauth_client_scope');
         $auth_url = get_site_option('xtec_oauth_client_auth_url');
         $auth_url .= '&client_id=' . $client_id . '&redirect_uri=' . $redirect_uri . '&scope=' . urlencode($scope);
