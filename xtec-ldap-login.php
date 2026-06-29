@@ -527,7 +527,81 @@ function xtec_oauth_add_login_button()
         $auth_url = get_site_option('xtec_oauth_client_auth_url');
         $auth_url .= '&client_id=' . $client_id . '&redirect_uri=' . $redirect_uri . '&scope=' . urlencode($scope);
 
-        echo '<a href="' . $auth_url . '" class="button button-primary button-large">' . __('XTEC Login', 'xtec-ldap-login') . '</a><br><br>';
+        ?>
+        <style>
+            #xtec-buttons {
+                width: fit-content;
+            }
+
+            .xtec-form-container {
+                display: none;
+            }
+
+            .xtec-button-container {
+                text-align: center;
+                width: 230px;
+                margin: 10px 0;
+            }
+
+            .xtec-button-container a {
+                display: inline-flex;
+                align-items: center;
+                padding: 10px 20px;
+                border: 1px solid #ccc;
+                background-color: #fff;
+                color: #555;
+                text-decoration: none;
+                font-size: 14px;
+                border-radius: 5px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                width: 100%;
+                justify-content: center;
+            }
+
+            .xtec-button-container img {
+                margin-right: 10px;
+                width: 24px;
+                height: 24px;
+            }
+        </style>
+
+        <div id="xtec-buttons">
+            <div class="xtec-button-container">
+                <a href="<?php echo $auth_url; ?>">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo"/>
+                    <?php _e('Login with Google XTEC', 'xtec-ldap-login'); ?>
+                </a>
+            </div>
+            <div class="xtec-button-container">
+                <a href="#" id="password-login-link">
+                    <img src="wp-includes/images/w-logo-blue.png" alt="WordPress logo"/>
+                    <?php _e('Entra amb usuari i contrasenya', 'xtec-ldap-login'); ?>
+                </a>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Wrap the standard form elements in a container.
+                const loginForm = document.getElementById('loginform');
+                const formContainer = document.createElement('div');
+                formContainer.className = 'xtec-form-container';
+
+                const formElements = loginForm.querySelectorAll('p, .user-pass-wrap, .forgetmenot, .submit');
+                formElements.forEach(function (el) {
+                    formContainer.appendChild(el.cloneNode(true));
+                    el.style.display = 'none';
+                });
+                loginForm.appendChild(formContainer);
+
+                // Show the form when the password link is clicked
+                document.getElementById('password-login-link').addEventListener('click', function (e) {
+                    e.preventDefault();
+                    formContainer.style.display = 'block';
+                });
+            });
+        </script>
+        <?php
     }
 }
 
