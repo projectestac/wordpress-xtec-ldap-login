@@ -596,6 +596,12 @@ function xtec_oauth_callback()
         $user_info = json_decode(wp_remote_retrieve_body($response), true);
 
         $email = $user_info['email'];
+
+        // Restrict access to @xtec.cat users only.
+        if (strpos($email, XTEC_DOMAIN) === false) {
+            wp_die(__('Access is restricted to XTEC users.', 'xtec-ldap-login'));
+        }
+
         $user = get_user_by('email', $email);
 
         if (!$user) {
