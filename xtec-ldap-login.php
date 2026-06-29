@@ -639,6 +639,9 @@ function xtec_oauth_callback()
         }
 
         if ($user instanceof \WP_User) {
+            // Ensure the user metadata is set, as it is required to create blogs in XTECBlocs
+            update_user_meta($user->ID, 'xtec_user_creator', 'OAUTH_XTEC');
+
             wp_set_current_user($user->ID, $user->user_login);
             wp_set_auth_cookie($user->ID);
             do_action('wp_login', $user->user_login, $user);
