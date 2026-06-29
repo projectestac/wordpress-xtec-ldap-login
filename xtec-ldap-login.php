@@ -14,6 +14,9 @@ register_activation_hook(__FILE__, 'xtec_ldap_login_activate');
 add_action('init', 'xtec_ldap_login_init');
 add_filter('send_password_change_email', '__return_false');
 
+/**
+ * Flushes rewrite rules on plugin activation to ensure the custom endpoint is registered.
+ */
 function xtec_ldap_login_activate()
 {
     // Add the rewrite rule on activation
@@ -508,6 +511,12 @@ function xtec_ldap_authenticate($user, string $username, string $password)
     return new WP_User($user_info->ID);
 }
 
+/**
+ * Adds the OAuth login button to the WordPress login form.
+ *
+ * This function checks if OAuth is the selected login method and, if so,
+ * constructs the authorization URL and displays a login button.
+ */
 function xtec_oauth_add_login_button()
 {
     $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type');
@@ -522,6 +531,12 @@ function xtec_oauth_add_login_button()
     }
 }
 
+/**
+ * Handles the OAuth callback request.
+ *
+ * This function is hooked to 'template_redirect' and checks for the 'oauth_callback'
+ * query variable. If present, it initiates the OAuth callback process.
+ */
 function xtec_oauth_handle_callback()
 {
     if (get_query_var('oauth_callback')) {
@@ -529,6 +544,13 @@ function xtec_oauth_handle_callback()
     }
 }
 
+/**
+ * Processes the OAuth callback from the provider.
+ *
+ * This function handles the authorization code returned by the OAuth provider,
+ * exchanges it for an access token, retrieves user information, and then
+ * creates or logs in the user in WordPress.
+ */
 function xtec_oauth_callback()
 {
     $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type');
