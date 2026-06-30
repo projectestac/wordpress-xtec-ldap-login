@@ -568,13 +568,13 @@ function xtec_oauth_add_login_button()
         <div id="xtec-buttons">
             <div class="xtec-button-container">
                 <a href="<?php echo $auth_url; ?>">
-                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo"/>
+                    <img src="wp-content/plugins/xtec-ldap-login/images/google.png" alt="Google logo"/>
                     <?php _e('Login with Google XTEC', 'xtec-ldap-login'); ?>
                 </a>
             </div>
             <div class="xtec-button-container">
                 <a href="#" id="password-login-link">
-                    <img src="wp-includes/images/w-logo-blue.png" alt="WordPress logo"/>
+                    <img src="wp-content/plugins/xtec-ldap-login/images/wordpress.png" alt="WordPress logo"/>
                     <?php _e('Entra amb usuari i contrasenya', 'xtec-ldap-login'); ?>
                 </a>
             </div>
@@ -720,7 +720,7 @@ function xtec_oauth_callback()
             wp_set_auth_cookie($user->ID);
             do_action('wp_login', $user->user_login, $user);
 
-            wp_redirect(admin_url());
+            wp_redirect(admin_url('my-sites.php'));
             exit;
         }
 
