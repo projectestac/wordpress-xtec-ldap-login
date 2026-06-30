@@ -1,0 +1,177 @@
+# Copyright (C) 2026 Francesc Bassas & Toni Ginard
+# This file is distributed under the same license as the XTEC Login plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: XTEC Login 3.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/xtec-ldap-login\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-06-30T13:30:57+02:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: xtec-ldap-login\n"
+
+#. Plugin Name of the plugin
+#: xtec-ldap-login.php
+#: xtec-ldap-login.php:64
+#: xtec-ldap-login.php:65
+#: xtec-ldap-login.php:79
+#: xtec-ldap-login.php:80
+#: xtec-ldap-login.php:150
+msgid "XTEC Login"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: xtec-ldap-login.php
+msgid "https://github.com/projectestac/wordpress-xtec-ldap-login"
+msgstr ""
+
+#. Description of the plugin
+#: xtec-ldap-login.php
+msgid "Overrides the core WordPress authentication method to allow the user authentication and registration"
+msgstr ""
+
+#. Author of the plugin
+#: xtec-ldap-login.php
+msgid "Francesc Bassas & Toni Ginard"
+msgstr ""
+
+#: xtec-ldap-login.php:140
+msgid "Options saved."
+msgstr ""
+
+#: xtec-ldap-login.php:158
+msgid "LDAP Host"
+msgstr ""
+
+#: xtec-ldap-login.php:169
+msgid "LDAP Port"
+msgstr ""
+
+#: xtec-ldap-login.php:180
+msgid "LDAP Version"
+msgstr ""
+
+#: xtec-ldap-login.php:191
+msgid "Base DN"
+msgstr ""
+
+#: xtec-ldap-login.php:202
+msgid "OAuth Client ID"
+msgstr ""
+
+#: xtec-ldap-login.php:213
+msgid "OAuth Client Secret"
+msgstr ""
+
+#: xtec-ldap-login.php:224
+msgid "OAuth Client Token URL"
+msgstr ""
+
+#: xtec-ldap-login.php:235
+msgid "OAuth Client User Info URL"
+msgstr ""
+
+#: xtec-ldap-login.php:246
+msgid "OAuth Client Scope"
+msgstr ""
+
+#: xtec-ldap-login.php:257
+msgid "OAuth Client Auth URL"
+msgstr ""
+
+#: xtec-ldap-login.php:270
+msgid "Validation Type"
+msgstr ""
+
+#: xtec-ldap-login.php:286
+msgid "LDAP"
+msgstr ""
+
+#: xtec-ldap-login.php:291
+msgid "The user is validated through the LDAP server. If the user enters for the first time and validates, the application registers it. First attempt to validate as user of LDAP server and then if fails attempt to validate as user of the application. <strong>IMPORTANT: When LDAP is on, any XTEC user can log in.</strong>"
+msgstr ""
+
+#: xtec-ldap-login.php:306
+msgid "OAuth"
+msgstr ""
+
+#: xtec-ldap-login.php:310
+msgid "The user is validated through the OAuth server."
+msgstr ""
+
+#: xtec-ldap-login.php:323
+msgid "Application Data Base"
+msgstr ""
+
+#: xtec-ldap-login.php:326
+msgid "The user is validated through Application Data Base"
+msgstr ""
+
+#: xtec-ldap-login.php:376
+msgid "The username is empty."
+msgstr ""
+
+#: xtec-ldap-login.php:379
+msgid "The password is empty."
+msgstr ""
+
+#: xtec-ldap-login.php:406
+msgid "The password is not correct"
+msgstr ""
+
+#: xtec-ldap-login.php:421
+msgid "Could not connect to LDAP server"
+msgstr ""
+
+#: xtec-ldap-login.php:432
+msgid "Could not bind to the LDAP directory. The username, the password or both are not correct"
+msgstr ""
+
+#: xtec-ldap-login.php:476
+msgid "Your account has been marked as a spammer"
+msgstr ""
+
+#: xtec-ldap-login.php:482
+msgid "Site Suspended"
+msgstr ""
+
+#: xtec-ldap-login.php:508
+#, php-format
+msgid "The password you entered for the username <strong>%1$s</strong> is incorrect. <a href=\"%2$s\" title=\"Password Lost and Found\">Lost your password</a>?"
+msgstr ""
+
+#: xtec-ldap-login.php:572
+msgid "Login with Google XTEC"
+msgstr ""
+
+#: xtec-ldap-login.php:578
+msgid "Login with username and password"
+msgstr ""
+
+#: xtec-ldap-login.php:653
+msgid "Error getting access token."
+msgstr ""
+
+#: xtec-ldap-login.php:667
+msgid "Error getting user info."
+msgstr ""
+
+#: xtec-ldap-login.php:676
+msgid "Access is restricted to XTEC users."
+msgstr ""
+
+#: xtec-ldap-login.php:686
+msgid "Could not create user: username derived from email is empty."
+msgstr ""
+
+#: xtec-ldap-login.php:709
+msgid "Could not create user:"
+msgstr ""
+
+#: xtec-ldap-login.php:727
+msgid "Could not log in. User could not be found or created."
+msgstr ""

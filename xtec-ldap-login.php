@@ -504,8 +504,15 @@ function xtec_ldap_authenticate($user, string $username, string $password)
         }
 
         // Do the actual validation
-    } else if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) { // get_site_option('xtec_ldap_login_type') == "Application Data Base")
-        return new WP_Error('incorrect_password', sprintf(__('The password you entered for the username <strong>%1$s</strong> is incorrect. <a href="%2$s" title="Password Lost and Found">Lost your password</a>?', 'xtec-ldap-login'), $username, site_url('wp-login.php?action=lostpassword', 'login')));
+    } else if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) {
+        return new WP_Error(
+            'incorrect_password',
+            sprintf(
+                __('The password you entered for the username <strong>%1$s</strong> is incorrect. <a href="%2$s" title="Password Lost and Found">Lost your password</a>?', 'xtec-ldap-login'),
+                $username,
+                site_url('wp-login.php?action=lostpassword', 'login')
+            )
+        );
     }
 
     return new WP_User($user_info->ID);
@@ -575,7 +582,7 @@ function xtec_oauth_add_login_button()
             <div class="xtec-button-container">
                 <a href="#" id="password-login-link">
                     <img src="wp-content/plugins/xtec-ldap-login/images/wordpress.png" alt="WordPress logo"/>
-                    <?php _e('Entra amb usuari i contrasenya', 'xtec-ldap-login'); ?>
+                    <?php _e('Login with username and password', 'xtec-ldap-login'); ?>
                 </a>
             </div>
         </div>
