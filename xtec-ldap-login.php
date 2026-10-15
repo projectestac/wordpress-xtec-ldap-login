@@ -399,12 +399,7 @@ function xtec_ldap_authenticate($user, string $username, string $password)
             ($username === 'admin') ||
             preg_match("/^.+@edu365\.cat$/", $user_info->user_email))
     ) {
-        if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) {
-            do_action('wp_login_failed', $username);
-            return new WP_Error('incorrect_password', __('The password is not correct', 'xtec-ldap-login'));
-        }
-
-        return new WP_User($user_info->ID);
+        return xtec_ldap_local_authenticate($user_info, $username, $password);
     }
 
     $xtec_ldap_host = get_site_option('xtec_ldap_host');
@@ -413,14 +408,16 @@ function xtec_ldap_authenticate($user, string $username, string $password)
     $xtec_ldap_base_dn = get_site_option('xtec_ldap_base_dn');
 
     if ($xtec_ldap_login_type === 'LDAP') {
-        // Without the LDAP extension of PHP, the credentials can't be verified.
-        if (!function_exists('ldap_connect')) {
-            return new WP_Error('ldap_connection', __('Could not connect to LDAP server', 'xtec-ldap-login'));
-        }
+        // Local users, which aren't XTEC users, can always log in with the password of the application when
+        // the validation through LDAP fails.
+        $is_local_user = $user_info && !xtec_ldap_is_xtec_user($user_info);
 
-        // Verify credentials through LDAP.
-        $ldap_conn = ldap_connect($xtec_ldap_host, $xtec_ldap_port);
+        // Without the LDAP extension of PHP, the credentials can't be verified.
+        $ldap_conn = function_exists('ldap_connect') ? ldap_connect($xtec_ldap_host, $xtec_ldap_port) : false;
         if ($ldap_conn === false) {
+            if ($is_local_user) {
+                return xtec_ldap_local_authenticate($user_info, $username, $password);
+            }
             return new WP_Error('ldap_connection', __('Could not connect to LDAP server', 'xtec-ldap-login'));
         }
 
@@ -429,8 +426,9 @@ function xtec_ldap_authenticate($user, string $username, string $password)
         $ldap_bind = @ldap_bind($ldap_conn, 'cn=' . $username . ',' . $xtec_ldap_base_dn, $password);
 
         if ($ldap_bind === false) {
-            // If LDAP fails, in Nodes, this do_action activates the local login. In XTECBlocs,
-            // it was previously removed, so this do_action has no effect
+            if ($is_local_user) {
+                return xtec_ldap_local_authenticate($user_info, $username, $password);
+            }
             do_action('wp_login_failed', $username);
             return new WP_Error('incorrect_password', __('Could not bind to the LDAP directory. The username, the password or both are not correct', 'xtec-ldap-login'));
         }
@@ -470,6 +468,11 @@ function xtec_ldap_authenticate($user, string $username, string $password)
             return new WP_User($user_id);
         }
 
+        // The credentials are valid in LDAP, but the user doesn't exist locally and couldn't be created
+        if (!$user_info) {
+            return new WP_Error('invalid_username', __('Could not log in. User could not be found or created.', 'xtec-ldap-login'));
+        }
+
         if (is_multisite()) {
             // Is user marked as spam?
             if (1 === (int)$user_info->spam) {
@@ -504,6 +507,15 @@ function xtec_ldap_authenticate($user, string $username, string $password)
         }
 
         // Do the actual validation
+    } else if (!$user_info) {
+        do_action('wp_login_failed', $username);
+        return new WP_Error(
+            'invalid_username',
+            sprintf(
+                __('<strong>Error:</strong> The username <strong>%s</strong> is not registered on this site. If you are unsure of your username, try your email address instead.'),
+                esc_html($username)
+            )
+        );
     } else if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) {
         return new WP_Error(
             'incorrect_password',
@@ -516,6 +528,38 @@ function xtec_ldap_authenticate($user, string $username, string $password)
     }
 
     return new WP_User($user_info->ID);
+}
+
+/**
+ * Validates a user with the password stored in the application.
+ *
+ * @param WP_User $user_info The user.
+ * @param string $username User's username, as entered in the login form.
+ * @param string $password User's password.
+ * @return WP_Error|WP_User WP_User object if login successful, otherwise WP_Error object.
+ */
+function xtec_ldap_local_authenticate(WP_User $user_info, string $username, string $password)
+{
+    if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) {
+        do_action('wp_login_failed', $username);
+        return new WP_Error('incorrect_password', __('The password is not correct', 'xtec-ldap-login'));
+    }
+
+    return new WP_User($user_info->ID);
+}
+
+/**
+ * Checks if a user is a XTEC user, that is, if it was registered through LDAP or OAuth or if it has a XTEC e-mail.
+ *
+ * @param WP_User $user_info The user.
+ * @return bool True if it is a XTEC user.
+ */
+function xtec_ldap_is_xtec_user(WP_User $user_info): bool
+{
+    $creator = get_user_meta($user_info->ID, 'xtec_user_creator', true);
+
+    return in_array($creator, ['LDAP_XTEC', 'OAUTH_XTEC'], true)
+        || str_ends_with(strtolower($user_info->user_email), XTEC_DOMAIN);
 }
 
 /**
@@ -575,13 +619,13 @@ function xtec_oauth_add_login_button()
         <div id="xtec-buttons">
             <div class="xtec-button-container">
                 <a href="<?php echo $auth_url; ?>">
-                    <img src="wp-content/plugins/xtec-ldap-login/images/google.png" alt="Google logo"/>
+                    <img src="<?php echo esc_url(plugins_url('images/google.png', __FILE__)); ?>" alt="Google logo"/>
                     <?php _e('Login with Google XTEC', 'xtec-ldap-login'); ?>
                 </a>
             </div>
             <div class="xtec-button-container">
                 <a href="#" id="password-login-link">
-                    <img src="wp-content/plugins/xtec-ldap-login/images/wordpress.png" alt="WordPress logo"/>
+                    <img src="<?php echo esc_url(plugins_url('images/wordpress.png', __FILE__)); ?>" alt="WordPress logo"/>
                     <?php _e('Login with username and password', 'xtec-ldap-login'); ?>
                 </a>
             </div>
@@ -589,15 +633,15 @@ function xtec_oauth_add_login_button()
 
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                // Wrap the standard form elements in a container.
+                // Move the standard form elements to a hidden container. They are moved, not copied, so that the
+                // fields keep working (WordPress enables and handles them with JavaScript) and aren't duplicated.
                 const loginForm = document.getElementById('loginform');
                 const formContainer = document.createElement('div');
                 formContainer.className = 'xtec-form-container';
 
                 const formElements = loginForm.querySelectorAll('p, .user-pass-wrap, .forgetmenot, .submit');
                 formElements.forEach(function (el) {
-                    formContainer.appendChild(el.cloneNode(true));
-                    el.style.display = 'none';
+                    formContainer.appendChild(el);
                 });
                 loginForm.appendChild(formContainer);
 
@@ -605,6 +649,9 @@ function xtec_oauth_add_login_button()
                 document.getElementById('password-login-link').addEventListener('click', function (e) {
                     e.preventDefault();
                     formContainer.style.display = 'block';
+                    // WordPress disables the password field while it is hidden, to prevent autofill
+                    document.getElementById('user_pass').disabled = false;
+                    document.getElementById('user_login').focus();
                 });
             });
         </script>
