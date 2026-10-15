@@ -151,7 +151,7 @@ function xtec_ldap_login_options()
             <table class="form-table">
                 <tbody>
                 <?php
-                if (is_xtec_super_admin()) { ?>
+                if (is_super_admin()) { ?>
                     <tr valign="top">
                         <th scope="row">
                             <label for="xtec_ldap_host">
@@ -364,10 +364,8 @@ function xtec_ldap_authenticate($user, string $username, string $password)
         return $user;
     }
 
-    // Remove standard authentication only in XTECBlocs.
-    if (is_xtecblocs()) {
-        remove_filter('authenticate', 'wp_authenticate_username_password', 20, 3);
-    }
+    // Remove standard authentication.
+    remove_filter('authenticate', 'wp_authenticate_username_password', 20, 3);
 
     if (empty($username) || empty($password)) {
         $error = new WP_Error();
@@ -399,7 +397,7 @@ function xtec_ldap_authenticate($user, string $username, string $password)
     if ($user_info &&
         ((strlen($username) > 8) ||
             ($username === 'admin') ||
-            (is_xtecblocs() && preg_match("/^.+@edu365\.cat$/", $user_info->user_email)))
+            preg_match("/^.+@edu365\.cat$/", $user_info->user_email))
     ) {
         if (!wp_check_password($password, $user_info->user_pass, $user_info->ID)) {
             do_action('wp_login_failed', $username);
@@ -415,6 +413,11 @@ function xtec_ldap_authenticate($user, string $username, string $password)
     $xtec_ldap_base_dn = get_site_option('xtec_ldap_base_dn');
 
     if ($xtec_ldap_login_type === 'LDAP') {
+        // Without the LDAP extension of PHP, the credentials can't be verified.
+        if (!function_exists('ldap_connect')) {
+            return new WP_Error('ldap_connection', __('Could not connect to LDAP server', 'xtec-ldap-login'));
+        }
+
         // Verify credentials through LDAP.
         $ldap_conn = ldap_connect($xtec_ldap_host, $xtec_ldap_port);
         if ($ldap_conn === false) {
@@ -448,10 +451,7 @@ function xtec_ldap_authenticate($user, string $username, string $password)
                 'last_name' => $ldap_user[0]['sn'][0],
             );
 
-            // In Àgora will use the default role of WordPress
-            if (is_xtecblocs()) {
-                $user_data['role'] = strtolower('subscriber');
-            }
+            $user_data['role'] = 'subscriber';
 
             // Insert the user into the database (creates it)
             $user_id = wp_insert_user($user_data);
