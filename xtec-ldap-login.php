@@ -10,21 +10,8 @@
 
 const XTEC_DOMAIN = '@xtec.cat';
 
-register_activation_hook(__FILE__, 'xtec_ldap_login_activate');
 add_action('init', 'xtec_ldap_login_init');
 add_filter('send_password_change_email', '__return_false');
-
-/**
- * Flushes rewrite rules on plugin activation to ensure the custom endpoint is registered.
- */
-function xtec_ldap_login_activate()
-{
-    // Add the rewrite rule on activation
-    add_rewrite_rule('^oauth-callback/?$', 'index.php?oauth_callback=1', 'top');
-
-    // Flush rewrite rules to make sure our custom endpoint is registered
-    flush_rewrite_rules();
-}
 
 /**
  * Plugin initialization
@@ -44,14 +31,9 @@ function xtec_ldap_login_init()
     add_filter('authenticate', 'xtec_ldap_authenticate', 10, 3); // Executed before standard filter.
     add_action('login_form', 'xtec_oauth_add_login_button');
 
-    // Use 'template_redirect' to handle the callback on the frontend
-    add_action('template_redirect', 'xtec_oauth_handle_callback');
-
-    add_rewrite_rule('^oauth-callback/?$', 'index.php?oauth_callback=1', 'top');
-    add_filter('query_vars', function ($vars) {
-        $vars[] = 'oauth_callback';
-        return $vars;
-    });
+    // The callback is detected by its path, before WordPress looks for the content of the request, so that it doesn't
+    // depend on the rewrite rules, which may not have been regenerated in the server
+    add_action('parse_request', 'xtec_oauth_handle_callback');
 }
 
 /**
@@ -573,10 +555,10 @@ function xtec_oauth_add_login_button()
     $xtec_ldap_login_type = get_site_option('xtec_ldap_login_type');
     if ($xtec_ldap_login_type === 'OAuth') {
         $client_id = get_site_option('xtec_oauth_client_id');
-        $redirect_uri = network_home_url() . 'oauth-callback';
         $scope = get_site_option('xtec_oauth_client_scope');
         $auth_url = get_site_option('xtec_oauth_client_auth_url');
-        $auth_url .= '&client_id=' . $client_id . '&redirect_uri=' . $redirect_uri . '&scope=' . urlencode($scope);
+        $auth_url .= '&client_id=' . urlencode($client_id) . '&redirect_uri=' . urlencode(xtec_oauth_redirect_uri())
+            . '&scope=' . urlencode($scope);
 
         ?>
         <style>
@@ -660,14 +642,26 @@ function xtec_oauth_add_login_button()
 }
 
 /**
- * Handles the OAuth callback request.
+ * Returns the address where the OAuth provider sends the user back, which must be the same when the user is sent to
+ * the provider and when the code is exchanged for the token. It must also be registered in the provider.
  *
- * This function is hooked to 'template_redirect' and checks for the 'oauth_callback'
- * query variable. If present, it initiates the OAuth callback process.
+ * @return string The address, in the main site of the network.
  */
-function xtec_oauth_handle_callback()
+function xtec_oauth_redirect_uri(): string
 {
-    if (get_query_var('oauth_callback')) {
+    return network_home_url('/oauth-callback');
+}
+
+/**
+ * Handles the OAuth callback request, when the path of the request is the one of the callback, with or without a
+ * slash at the end.
+ */
+function xtec_oauth_handle_callback(): void
+{
+    $path = (string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+    $callback = (string)parse_url(xtec_oauth_redirect_uri(), PHP_URL_PATH);
+
+    if (untrailingslashit($path) === untrailingslashit($callback)) {
         xtec_oauth_callback();
     }
 }
@@ -691,7 +685,7 @@ function xtec_oauth_callback()
         $token_url = get_site_option('xtec_oauth_client_token_url');
         $client_id = get_site_option('xtec_oauth_client_id');
         $client_secret = get_site_option('xtec_oauth_client_secret');
-        $redirect_uri = site_url('/oauth-callback');
+        $redirect_uri = xtec_oauth_redirect_uri();
 
         $response = wp_remote_post($token_url, [
             'body' => [
