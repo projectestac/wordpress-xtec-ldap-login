@@ -10,6 +10,9 @@
 
 const XTEC_DOMAIN = '@xtec.cat';
 
+// Cookie with the random value that is sent to the OAuth provider and must come back in the callback
+const XTEC_OAUTH_STATE_COOKIE = 'xtec_oauth_state';
+
 add_action('init', 'xtec_ldap_login_init');
 add_filter('send_password_change_email', '__return_false');
 
@@ -29,6 +32,7 @@ function xtec_ldap_login_init()
     }
 
     add_filter('authenticate', 'xtec_ldap_authenticate', 10, 3); // Executed before standard filter.
+    add_action('login_init', 'xtec_oauth_set_state');
     add_action('login_form', 'xtec_oauth_add_login_button');
 
     // The callback is detected by its path, before WordPress looks for the content of the request, so that it doesn't
@@ -558,7 +562,7 @@ function xtec_oauth_add_login_button()
         $scope = get_site_option('xtec_oauth_client_scope');
         $auth_url = get_site_option('xtec_oauth_client_auth_url');
         $auth_url .= '&client_id=' . urlencode($client_id) . '&redirect_uri=' . urlencode(xtec_oauth_redirect_uri())
-            . '&scope=' . urlencode($scope);
+            . '&scope=' . urlencode($scope) . '&state=' . urlencode(xtec_oauth_state());
 
         ?>
         <style>
@@ -642,6 +646,42 @@ function xtec_oauth_add_login_button()
 }
 
 /**
+ * Returns the random value of the login with OAuth of the browser.
+ *
+ * @return string The value, or empty if the browser doesn't have it.
+ */
+function xtec_oauth_state(): string
+{
+    $state = $_COOKIE[XTEC_OAUTH_STATE_COOKIE] ?? '';
+
+    return is_string($state) && preg_match('/^[a-f0-9]{32}$/', $state) ? $state : '';
+}
+
+/**
+ * Keeps a random value in a cookie of the browser, before the login page is shown. The value is sent to the OAuth
+ * provider, which sends it back in the callback, where it must be the same as the one of the cookie. So a callback
+ * that hasn't been started in this browser, for example by another web, is rejected.
+ */
+function xtec_oauth_set_state(): void
+{
+    if (get_site_option('xtec_ldap_login_type') !== 'OAuth' || xtec_oauth_state() !== '') {
+        return;
+    }
+
+    $state = bin2hex(random_bytes(16));
+    // The cookie is sent when the provider redirects the browser to the callback, which is in the main site
+    setcookie(XTEC_OAUTH_STATE_COOKIE, $state, [
+        'expires' => time() + HOUR_IN_SECONDS,
+        'path' => '/',
+        'domain' => COOKIE_DOMAIN ?: '',
+        'secure' => is_ssl(),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    $_COOKIE[XTEC_OAUTH_STATE_COOKIE] = $state;
+}
+
+/**
  * Returns the address where the OAuth provider sends the user back, which must be the same when the user is sent to
  * the provider and when the code is exchanged for the token. It must also be registered in the provider.
  *
@@ -680,8 +720,21 @@ function xtec_oauth_callback()
         return;
     }
 
-    if (isset($_GET['code'])) {
+    if (isset($_GET['code']) && is_string($_GET['code'])) {
         $code = $_GET['code'];
+
+        // The callback must have been started in this browser, and the value is only used once
+        $state = isset($_GET['state']) && is_string($_GET['state']) ? $_GET['state'] : '';
+        $expected = xtec_oauth_state();
+        setcookie(XTEC_OAUTH_STATE_COOKIE, '', ['expires' => 1, 'path' => '/', 'domain' => COOKIE_DOMAIN ?: '']);
+        if ($expected === '' || !hash_equals($expected, $state)) {
+            wp_die(
+                esc_html__('The login could not be verified. Please try again.', 'xtec-ldap-login'),
+                '',
+                ['response' => 403, 'link_url' => wp_login_url(), 'link_text' => esc_html__('Log In')]
+            );
+        }
+
         $token_url = get_site_option('xtec_oauth_client_token_url');
         $client_id = get_site_option('xtec_oauth_client_id');
         $client_secret = get_site_option('xtec_oauth_client_secret');
@@ -697,12 +750,13 @@ function xtec_oauth_callback()
             ],
         ]);
 
-        if (is_wp_error($response)) {
+        // The provider answers with an error if the code isn't valid, for example if it has already been used
+        $body = is_wp_error($response) ? null : json_decode(wp_remote_retrieve_body($response), true);
+        $access_token = is_array($body) ? ($body['access_token'] ?? '') : '';
+        if (!is_string($access_token) || $access_token === '') {
             wp_die(__('Error getting access token.', 'xtec-ldap-login'));
         }
 
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-        $access_token = $body['access_token'];
         $user_info_url = get_site_option('xtec_oauth_client_user_info_url');
 
         $response = wp_remote_get($user_info_url, [
@@ -711,16 +765,23 @@ function xtec_oauth_callback()
             ],
         ]);
 
-        if (is_wp_error($response)) {
+        $user_info = is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200
+            ? null : json_decode(wp_remote_retrieve_body($response), true);
+        $email = is_array($user_info) ? ($user_info['email'] ?? '') : '';
+        if (!is_string($email) || $email === '') {
             wp_die(__('Error getting user info.', 'xtec-ldap-login'));
         }
 
-        $user_info = json_decode(wp_remote_retrieve_body($response), true);
-
-        $email = $user_info['email'];
-
-        // Restrict access to @xtec.cat users only.
-        if (strpos($email, XTEC_DOMAIN) === false) {
+        // Restrict access to the users of the domain of XTEC, whose address has been verified by the provider. The
+        // version 2 of the user info of Google says it in verified_email, and the version 3 in email_verified. Google
+        // also gives the domain of the account (hd).
+        $verified = $user_info['verified_email'] ?? $user_info['email_verified'] ?? false;
+        $domain = ltrim(XTEC_DOMAIN, '@');
+        if (
+            !str_ends_with(strtolower($email), XTEC_DOMAIN)
+            || ($verified !== true && $verified !== 'true')
+            || (isset($user_info['hd']) && $user_info['hd'] !== $domain)
+        ) {
             wp_die(__('Access is restricted to XTEC users.', 'xtec-ldap-login'));
         }
 

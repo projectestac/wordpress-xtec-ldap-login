@@ -190,6 +190,9 @@ msgstr "S'ha produït un error en obtenir la informació de l'usuari."
 msgid "Access is restricted to XTEC users."
 msgstr "L'accés està restringit als usuaris XTEC."
 
+msgid "The login could not be verified. Please try again."
+msgstr "No s'ha pogut verificar l'inici de sessió. Torneu-ho a provar."
+
 #: xtec-ldap-login.php:686
 msgid "Could not create user: username derived from email is empty."
 msgstr ""
